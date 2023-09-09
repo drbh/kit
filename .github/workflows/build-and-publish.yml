@@ -81,6 +81,7 @@ jobs:
       - name: Upload All Release Assets
         run: |
           find ./src-tauri/target/release/bundle/ -type f | while read file; do
+            file=$(echo $file | sed 's|//|/|g') # remove double slashes in the file path
             echo "Uploading $file"
             asset_name=$(basename $file)
             asset_content_type=""
