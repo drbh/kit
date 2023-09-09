@@ -78,25 +78,49 @@ jobs:
           TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
         with:
           releaseId: ${{ needs.create-release.outputs.release_id }} 
+      - name: Upload All Release Assets
+        run: |
+          for file in ./src-tauri/target/release/bundle/*; do
+            echo "Uploading $file"
+            asset_name=$(basename $file)
+            asset_content_type=""
+            case "${file##*.}" in
+              dmg)
+                asset_content_type="application/x-diskcopy"
+                ;;
+              tar.gz)
+                asset_content_type="application/gzip"
+                ;;
+              *)
+                echo "Unknown file type for $file, skipping"
+                continue
+                ;;
+            esac
+            curl \
+              -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+              -H "Content-Type: $asset_content_type" \
+              --data-binary @"$file" \
+              "${{ steps.create-release.outputs.upload_url }}?name=$asset_name"
+          done
   
-  publish-release:
-    permissions:
-      contents: write
-    runs-on: ubuntu-20.04
-    needs: [create-release, build-tauri]
+  # publish-release:
+  #   permissions:
+  #     contents: write
+  #   runs-on: ubuntu-20.04
+  #   needs: [create-release, build-tauri]
 
-    steps:
-      - name: publish release
-        id: publish-release
-        uses: actions/github-script@v6
-        env:
-          release_id: ${{ needs.create-release.outputs.release_id }}
-        with:
-          script: |
-            github.rest.repos.updateRelease({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              release_id: process.env.release_id,
-              draft: false,
-              prerelease: false
-            })
+  #   steps:
+  #     - name: publish release
+  #       id: publish-release
+  #       uses: actions/github-script@v6
+  #       env:
+  #         release_id: ${{ needs.create-release.outputs.release_id }}
+  #       with:
+  #         script: |
+  #           github.rest.repos.updateRelease({
+  #             owner: context.repo.owner,
+  #             repo: context.repo.repo,
+  #             release_id: process.env.release_id,
+  #             draft: false,
+  #             prerelease: false
+  #           })
