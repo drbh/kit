@@ -83,7 +83,7 @@ jobs:
           script: |
             const fs = require('fs');
             const path = require('path');
-            const directoryPath = path.resolve(__dirname, './src-tauri/target/release/bundle/macos/');
+            const directoryPath = path.resolve('./src-tauri/target/release/bundle/macos/');
             fs.readdir(directoryPath, (err, files) => {
               if (err) {
                 throw err;
