@@ -89,10 +89,9 @@ jobs:
                 throw err;
               }
               files.forEach(file => {
-                const filePath = path.join(directoryPath, file);
                 const fileNameWithArch = file.replace(path.basename(filePath), `app-${{matrix.architecture}}`);
-                if (fs.lstatSync(filePath).isFile()) {
-                  const fileData = fs.readFileSync(filePath);
+                if (fs.lstatSync(fileNameWithArch).isFile()) {
+                  const fileData = fs.readFileSync(fileNameWithArch);
                   github.rest.repos.uploadReleaseAsset({
                     owner: context.repo.owner,
                     repo: context.repo.repo,
