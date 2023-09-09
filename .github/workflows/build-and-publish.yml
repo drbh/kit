@@ -90,13 +90,14 @@ jobs:
               }
               files.forEach(file => {
                 const filePath = path.join(directoryPath, file);
+                const fileNameWithArch = file.replace(path.basename(filePath), `app-${{matrix.architecture}}`);
                 if (fs.lstatSync(filePath).isFile()) {
                   const fileData = fs.readFileSync(filePath);
                   github.rest.repos.uploadReleaseAsset({
                     owner: context.repo.owner,
                     repo: context.repo.repo,
                     release_id: process.env.release_id,
-                    name: path.basename(filePath),
+                    name: fileNameWithArch,
                     data: fileData,
                     headers: {
                       'content-type': 'application/octet-stream',
