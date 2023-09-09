@@ -80,7 +80,7 @@ jobs:
           releaseId: ${{ needs.create-release.outputs.release_id }} 
       - name: Upload All Release Assets
         run: |
-          for file in ./src-tauri/target/release/bundle/*; do
+          find ./src-tauri/target/release/bundle/ -type f | while read file; do
             echo "Uploading $file"
             asset_name=$(basename $file)
             asset_content_type=""
