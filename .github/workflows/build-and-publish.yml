@@ -39,6 +39,7 @@ jobs:
             return data.id
 
   build-tauri:
+    needs: create-release
     permissions:
       contents: write
     strategy:
@@ -63,11 +64,6 @@ jobs:
           node-version: 16
       - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable
-      - name: install dependencies (ubuntu only)
-        if: matrix.platform == 'ubuntu-20.04'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf
       - name: Install pnpm
         run: npm install -g pnpm
       - name: install frontend dependencies
@@ -77,33 +73,38 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
         with:
-          releaseId: ${{ needs.create-release.outputs.release_id }} 
-      - name: Upload All Release Assets
-        run: |
-          find ./src-tauri/target/release/bundle/ -type f | while read file; do
-            file=$(echo $file | sed 's|//|/|g') # remove double slashes in the file path
-            echo "Uploading $file"
-            asset_name=$(basename $file)
-            asset_content_type=""
-            case "${file##*.}" in
-              dmg)
-                asset_content_type="application/x-diskcopy"
-                ;;
-              tar.gz)
-                asset_content_type="application/gzip"
-                ;;
-              *)
-                echo "Unknown file type for $file, skipping"
-                continue
-                ;;
-            esac
-            curl \
-              -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-              -H "Content-Type: $asset_content_type" \
-              --data-binary @"$file" \
-              "${{ steps.create-release.outputs.upload_url }}?name=$asset_name"
-          done
-  
+          releaseId: ${{ needs.create-release.outputs.release_id }}
+      - name: upload release assets
+        id: upload-release-assets
+        uses: actions/github-script@v6
+        env:
+          release_id: ${{ needs.create-release.outputs.release_id }}
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            const directoryPath = path.resolve(__dirname, './src-tauri/target/release/bundle/macos/');
+            fs.readdir(directoryPath, (err, files) => {
+              if (err) {
+                throw err;
+              }
+              files.forEach(file => {
+                const filePath = path.join(directoryPath, file);
+                const fileData = fs.readFileSync(filePath);
+                github.rest.repos.uploadReleaseAsset({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  release_id: process.env.release_id,
+                  name: path.basename(filePath),
+                  data: fileData,
+                  headers: {
+                    'content-type': 'application/octet-stream',
+                    'content-length': fileData.length
+                  }
+                });
+              });
+            });
+
   # publish-release:
   #   permissions:
   #     contents: write
