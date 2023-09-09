@@ -14,8 +14,12 @@ jobs:
       fail-fast: false
       matrix:
         platform: [macos-latest]
+        architecture: [x64, arm64]
 
     runs-on: ${{ matrix.platform }}
+    env:
+      TAURI_BUILD_TARGET: ${{ matrix.architecture }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v3
