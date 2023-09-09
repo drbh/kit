@@ -56,4 +56,4 @@ jobs:
       - name: Upload to cloudflare
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-        run: wrangler r2 object put kit-app/kit.app.tar.gz -f src-tauri/target/release/bundle/macos/kit.app.tar.gz
+        run: wrangler r2 object put kit-app/kit-${{ matrix.architecture }}.app.tar.gz -f src-tauri/target/release/bundle/macos/kit.app.tar.gz
