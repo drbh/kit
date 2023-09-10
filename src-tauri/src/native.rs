@@ -44,7 +44,10 @@ impl DbManagerTrait for NativeDbManager {
     /// * `Result<TableRequest, String>` - The result of the table request.
     fn get_table_data(&mut self, table_name: &str) -> Result<TableRequest, String> {
         println!("Getting Native table data for: {:?}", table_name);
-        let mut stmt = match self.conn.prepare(&format!("SELECT * FROM '{}' LIMIT 100", table_name)) {
+        let mut stmt = match self
+            .conn
+            .prepare(&format!("SELECT * FROM '{}' LIMIT 100", table_name))
+        {
             Ok(stmt) => stmt,
             Err(e) => return Err(e.to_string()),
         };
@@ -90,7 +93,10 @@ impl DbManagerTrait for NativeDbManager {
                         Err(e) => return Err(e.to_string()),
                     };
 
-                    println!("Total rows in table from query: {:?}", total_rows_in_table_from_query);
+                    println!(
+                        "Total rows in table from query: {:?}",
+                        total_rows_in_table_from_query
+                    );
 
                     Ok(TableRequest {
                         column_names,
@@ -228,6 +234,82 @@ impl DbManagerTrait for NativeDbManager {
         }];
         match self.conn.execute(&sql, params.as_slice()) {
             Ok(_) => Ok("Row updated successfully".to_string()),
+            Err(e) => Err(e.to_string()),
+        }
+    }
+
+    /// Runs a query on the database.
+    ///
+    /// # Arguments
+    ///
+    /// * `query` - A string slice that holds the query to be run.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<TableRequest, String>` - The result of the query.
+    fn run_query(&mut self, query: &str) -> Result<TableRequest, String> {
+        let mut stmt = match self.conn.prepare(query) {
+            Ok(stmt) => stmt,
+            Err(e) => return Err(e.to_string()),
+        };
+        let total_cols = stmt.column_count();
+        let rows: Result<Vec<Vec<SerializableValue>>, _> = stmt
+            .query_map([], |row| {
+                let mut cols = Vec::new();
+                for i in 0..total_cols {
+                    let value: rusqlite::types::Value = row.get(i)?;
+                    cols.push(SerializableValue::from(value));
+                }
+                Ok(cols)
+            })
+            .unwrap()
+            .collect();
+
+        match rows.as_ref() {
+            Ok(rows) => match rows.first() {
+                Some(first_item) => {
+                    let column_names: Vec<ColumnInfo> = stmt
+                        .column_names()
+                        .iter()
+                        .zip(first_item)
+                        .map(|(str, value)| ColumnInfo {
+                            name: str.to_string(),
+                            type_name: match value {
+                                SerializableValue::Null => "NULL".to_string(),
+                                SerializableValue::Integer(_) => "INTEGER".to_string(),
+                                SerializableValue::Real(_) => "REAL".to_string(),
+                                SerializableValue::Text(_) => "TEXT".to_string(),
+                                SerializableValue::Blob(_) => "BLOB".to_string(),
+                            },
+                        })
+                        .collect();
+
+                    let total_rows_in_table_from_query = match self.conn.query_row(
+                        &format!("SELECT COUNT(*) FROM ({})", query),
+                        [],
+                        |row| row.get(0),
+                    ) {
+                        Ok(count) => count,
+                        Err(e) => return Err(e.to_string()),
+                    };
+
+                    println!(
+                        "Total rows in table from query: {:?}",
+                        total_rows_in_table_from_query
+                    );
+
+                    Ok(TableRequest {
+                        column_names,
+                        rows: rows.clone(),
+                        row_count: total_rows_in_table_from_query,
+                    })
+                }
+                None => Ok(TableRequest {
+                    column_names: vec![],
+                    rows: vec![],
+                    row_count: 0,
+                }),
+            },
             Err(e) => Err(e.to_string()),
         }
     }

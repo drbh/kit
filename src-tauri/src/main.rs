@@ -216,6 +216,25 @@ fn update_row(
     db_manager.update_row(&table_name, &col_name, &index_col_name, id, value)
 }
 
+/// Runs a query on the database.
+///
+/// This function locks the `AppState`'s database manager and runs a query on the database.
+///
+/// # Arguments
+///
+/// * `query` - The query to run on the database.
+/// * `state` - The `AppState` containing the database manager.
+///     
+/// # Returns
+///
+/// * `Ok(TableRequest)` - If the query is successful.
+/// * `Err(String)` - If the query fails, with the error message.
+#[tauri::command]
+fn sql_query(query: String, state: State<'_, AppState>) -> Result<TableRequest, String> {
+    let mut db_manager = state.db.lock().unwrap();
+    db_manager.run_query(&query)
+}
+
 /// Subscribes to changes in the database.
 ///
 /// This function takes a callback function as an argument.
@@ -420,6 +439,7 @@ async fn main() {
             update_row,
             subscribe,
             register_callback,
+            sql_query
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

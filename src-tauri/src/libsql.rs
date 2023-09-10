@@ -243,4 +243,66 @@ impl DbManagerTrait for LibsqlDbManager {
             Err(e) => Err(e.to_string()),
         }
     }
+
+    /// Runs a query on the SQLite database.
+    ///
+    /// # Arguments
+    ///
+    /// * `query` - The query to run.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<TableRequest, String>` - A `Result` containing a `TableRequest` if successful, or an error message if not.    
+    fn run_query(&mut self, query: &str) -> Result<TableRequest, String> {
+        let result = self.libsqlite_conn.execute(query.to_string());
+        match result {
+            Ok(data) => {
+                let mut column_names = Vec::new();
+                let mut rows = Vec::new();
+                if let Some(first_row) = data.rows.first() {
+                    column_names = first_row
+                        .value_map
+                        .keys()
+                        .map(|key| ColumnInfo {
+                            name: key.to_string(),
+                            type_name: "TEXT".to_string(),
+                        })
+                        .collect();
+                }
+                for row in data.rows {
+                    let mut td = Vec::new();
+                    for col in &column_names {
+                        let value = row.value_map.get(&col.name).unwrap();
+                        td.push(SerializableValue::Text(value.to_string()));
+                    }
+                    rows.push(td);
+                }
+
+                // ensure that id column is always first
+                let mut id_column_index = 0;
+                for (i, col) in column_names.iter().enumerate() {
+                    if col.name == "id" {
+                        id_column_index = i;
+                        break;
+                    }
+                }
+
+                if id_column_index != 0 {
+                    let id_column = column_names.remove(id_column_index);
+                    column_names.insert(0, id_column);
+                    for row in &mut rows {
+                        let id_value = row.remove(id_column_index);
+                        row.insert(0, id_value);
+                    }
+                }
+
+                Ok(TableRequest {
+                    column_names,
+                    rows,
+                    row_count: 0,
+                })
+            }
+            Err(e) => Err(e.to_string()),
+        }
+    }
 }

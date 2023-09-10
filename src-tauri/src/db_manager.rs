@@ -48,6 +48,8 @@ pub trait DbManagerTrait {
         id: i64,
         value: SerializableValue,
     ) -> Result<String, String>;
+    /// `run_query` is a method that runs a query on the database.
+    fn run_query(&mut self, query: &str) -> Result<TableRequest, String>;
 }
 
 /// `DbManager` implementation.
@@ -148,5 +150,10 @@ impl DbManager {
     ) -> Result<String, String> {
         self.db
             .update_row(table_name, col_name, index_col_name, id, row)
+    }
+
+    /// Runs a query on the database.
+    pub fn run_query(&mut self, query: &str) -> Result<TableRequest, String> {
+        self.db.run_query(query)
     }
 }
