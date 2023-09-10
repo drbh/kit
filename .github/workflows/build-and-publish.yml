@@ -63,6 +63,8 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.architecture == 'x64' && 'x86_64-apple-darwin' || 'aarch64-apple-darwin' }}
+      - name: Set rust toolchain based on architecture
+        run: rustup default ${{ matrix.architecture == 'x64' && 'x86_64-apple-darwin' || 'aarch64-apple-darwin' }}
       - name: Install pnpm
         run: npm install -g pnpm
       - name: install frontend dependencies
