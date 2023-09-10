@@ -62,7 +62,7 @@ jobs:
       - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: x86_64-apple-darwin, aarch64-apple-darwin
+          targets: ${{ matrix.architecture == 'x64' && 'x86_64-apple-darwin' || 'aarch64-apple-darwin' }}
       - name: Install pnpm
         run: npm install -g pnpm
       - name: install frontend dependencies
@@ -73,7 +73,6 @@ jobs:
           TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
         with:
           releaseId: ${{ needs.create-release.outputs.release_id }}
-          args: -- --target ${{ matrix.architecture == 'x64' && 'x86_64-apple-darwin' || 'aarch64-apple-darwin' }}
       - name: upload release assets
         id: upload-release-assets
         uses: actions/github-script@v6
