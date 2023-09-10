@@ -73,59 +73,25 @@ jobs:
           TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
         with:
           releaseId: ${{ needs.create-release.outputs.release_id }}
-          args: -- --target ${{ matrix.architecture == 'x64' && 'x86_64-apple-darwin' || 'aarch64-apple-darwin' }}
-      - name: upload release assets
-        id: upload-release-assets
+
+  publish-release:
+    permissions:
+      contents: write
+    runs-on: ubuntu-20.04
+    needs: [create-release, build-tauri]
+
+    steps:
+      - name: publish release
+        id: publish-release
         uses: actions/github-script@v6
         env:
           release_id: ${{ needs.create-release.outputs.release_id }}
         with:
           script: |
-            const fs = require('fs');
-            const path = require('path');
-            const directoryPath = path.resolve('./src-tauri/target/release/bundle/macos/');
-            fs.readdir(directoryPath, (err, files) => {
-              if (err) {
-                throw err;
-              }
-              files.forEach(file => {
-                const fileNameWithArch = file.replace('kit', `kit-${{matrix.architecture}}`);
-                fs.renameSync(`${directoryPath}/${file}`, `${directoryPath}/${fileNameWithArch}`);
-                if (fs.lstatSync(fileNameWithArch).isFile()) {
-                  const fileData = fs.readFileSync(fileNameWithArch);
-                  github.rest.repos.uploadReleaseAsset({
-                    owner: context.repo.owner,
-                    repo: context.repo.repo,
-                    release_id: process.env.release_id,
-                    name: fileNameWithArch,
-                    data: fileData,
-                    headers: {
-                      'content-type': 'application/octet-stream',
-                      'content-length': fileData.length
-                    }
-                  });
-                }
-              });
-            });
-
-  # publish-release:
-  #   permissions:
-  #     contents: write
-  #   runs-on: ubuntu-20.04
-  #   needs: [create-release, build-tauri]
-
-  #   steps:
-  #     - name: publish release
-  #       id: publish-release
-  #       uses: actions/github-script@v6
-  #       env:
-  #         release_id: ${{ needs.create-release.outputs.release_id }}
-  #       with:
-  #         script: |
-  #           github.rest.repos.updateRelease({
-  #             owner: context.repo.owner,
-  #             repo: context.repo.repo,
-  #             release_id: process.env.release_id,
-  #             draft: false,
-  #             prerelease: false
-  #           })
+            github.rest.repos.updateRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: process.env.release_id,
+              draft: false,
+              prerelease: false
+            })
