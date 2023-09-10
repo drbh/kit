@@ -73,6 +73,7 @@ jobs:
           TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
         with:
           releaseId: ${{ needs.create-release.outputs.release_id }}
+          args: -- --target ${{ matrix.architecture == 'x64' && 'x86_64-apple-darwin' || 'aarch64-apple-darwin' }}
       - name: upload release assets
         id: upload-release-assets
         uses: actions/github-script@v6
