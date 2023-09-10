@@ -90,6 +90,7 @@ jobs:
               }
               files.forEach(file => {
                 const fileNameWithArch = file.replace('kit', `kit-${{matrix.architecture}}`);
+                fs.renameSync(`${directoryPath}/${file}`, `${directoryPath}/${fileNameWithArch}`);
                 if (fs.lstatSync(fileNameWithArch).isFile()) {
                   const fileData = fs.readFileSync(fileNameWithArch);
                   github.rest.repos.uploadReleaseAsset({
