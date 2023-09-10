@@ -49,9 +49,6 @@ jobs:
         architecture: [x64, arm64]
 
     runs-on: ${{ matrix.platform }}
-    env:
-      TAURI_BUILD_TARGET: ${{ matrix.architecture }}
-
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -74,6 +71,7 @@ jobs:
           TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
         with:
           releaseId: ${{ needs.create-release.outputs.release_id }}
+          args: --target ${{ matrix.architecture }}
       - name: upload release assets
         id: upload-release-assets
         uses: actions/github-script@v6
